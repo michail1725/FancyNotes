@@ -1,4 +1,7 @@
+using DbAccess;
+using FancyNotes.Service;
 using Microsoft.AspNetCore.ResponseCompression;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -6,7 +9,11 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
-builder.Services.AddScoped();
+builder.Services.AddDbContext<AppDbContext>(options =>
+options.UseSqlServer(builder.Configuration.GetConnectionString("DBConnection")));
+builder.Services.AddScoped<IService, NoteService>();
+builder.Services.AddScoped<IService, UserService>();
+builder.Services.AddOptions();
 
 var app = builder.Build();
 
