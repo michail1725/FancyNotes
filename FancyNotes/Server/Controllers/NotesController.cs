@@ -5,13 +5,8 @@ namespace FancyNotes.Server.Controllers
 {
     [ApiController]
     [Route("[controller]")]
-    public class NotesController
+    public class NotesController : ControllerBase
     {
-        private readonly AppDbContext db;
-
-        public  NotesController(AppDbContext db)
-        {
-            this.db = db;
-        }
+        
     }
 }

@@ -1,9 +1,93 @@
 ﻿@page "/"
+@using System.ComponentModel.DataAnnotations;
+@using FancyNotes.Shared;
+@inject HttpClient Http
 
-<PageTitle>Index</PageTitle>
+<PageTitle>Fancy Notes</PageTitle>
+ 
+<MudPaper Height="900px" Width="100%" >
+    <MudContainer Fixed="true">
+        <MudText Typo="Typo.h3">Lorem </MudText>
 
-<h1>Hello, world!</h1>
+        <EditForm Model="@loginModel" OnValidSubmit="OnValidSubmit">
+            <DataAnnotationsValidator />
+            <MudGrid>
+                <MudItem xs="12" sm="7">
+                    <MudCard>
+                        <MudCardContent>
+                            <MudTextField Label="Имя пользователя:" @bind-Value="loginModel.Username" For="@(() => loginModel.Username)" />
+                            <MudTextField Label="Пароль:" Class="mt-3"
+                                          @bind-Value="loginModel.Password" For="@(() => loginModel.Password)" InputType="InputType.Password" />
+                        </MudCardContent>
+                        <MudCardActions>
+                            <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto">Войти</MudButton>
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto" OnClick=@ShowModal>Зарегистрироваться</MudButton>
+                        </MudCardActions>
+                    </MudCard>
+                </MudItem>
+                <MudItem xs="12" sm="5">
+                    <MudPaper Class="pa-4 mud-height-full">
+                        <MudText Typo="Typo.subtitle2">Validation Summary</MudText>
+                        @if (success)
+                        {
+                            <MudText Color="Color.Success">Success</MudText>
+                        }
+                        else
+                        {
+                            <MudText Color="@Color.Error">
+                                <ValidationSummary />
+                            </MudText>
+                        }
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+        </EditForm>
+        
+    </MudContainer>
+</MudPaper>
 
-Welcome to your new app.
 
-<SurveyPrompt Title="How is Blazor working for you?" />
+
+@code {
+    [CascadingParameter] public IModalService Modal { get; set; } = default!;
+    [Inject] NavigationManager NavigationManager { get; set; }
+    LoginForm loginModel = new LoginForm();
+    bool success;
+
+    public class LoginForm
+    {
+        [Required]
+        //[StringLength(8, ErrorMessage = "Name length can't be more than 8.")]
+        public string? Username { get; set; }
+
+        [Required]
+        //[StringLength(30, ErrorMessage = "Password must be at least 8 characters long.", MinimumLength = 8)]
+        public string? Password { get; set; }
+
+    }
+
+    async void ShowModal()
+    {
+        var messageForm = Modal.Show<RegistrationModalPage>("Регистрация нового пользователя");
+        var result = await messageForm.Result;
+        if (!result.Cancelled)
+        {
+            NavigationManager.NavigateTo("/NotesObserver", true);
+        }
+    }
+
+    private async Task OnValidSubmit(EditContext context)
+    {
+        if (await Http.GetFromJsonAsync<bool>($"/api/users/byLoginData?userName={loginModel.Username}&password={loginModel.Password}"))
+        {
+            NavigationManager.NavigateTo("/NotesObserver", true);
+            StateHasChanged();
+        }
+        else
+        {
+            NavigationManager.NavigateTo("/NoteEditor", true);
+        }
+        
+    }
+
+}

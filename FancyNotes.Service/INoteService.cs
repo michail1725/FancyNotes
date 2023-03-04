@@ -1,12 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using FancyNotes.Shared;
 
 namespace FancyNotes.Service
 {
     public interface INoteService : IService
     {
+        public Note CreateNote(Note note);
+        public Note UpdateNote(Note note);
+        public void DeleteNote(Note note);
     }
 }
