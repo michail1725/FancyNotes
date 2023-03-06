@@ -15,6 +15,7 @@ namespace FancyNotes.Service
 
         public async Task<Note> CreateNote(Note note)
         {
+            note.User = null;
             _context.Notes.Add(note);
             await _context.SaveChangesAsync();
             return note;

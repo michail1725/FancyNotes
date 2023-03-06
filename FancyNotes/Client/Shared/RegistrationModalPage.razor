@@ -1,4 +1,6 @@
 ﻿@using System.ComponentModel.DataAnnotations
+@using FancyNotes.Client.Services.Contracts;
+@using FancyNotes.Infrastructure;
 @using FancyNotes.Shared
 @inject IModalService ModalService
 @inject HttpClient Http
@@ -50,6 +52,10 @@
 @code {
 
     [CascadingParameter] BlazoredModalInstance BlazoredModal { get; set; } = default!;
+    [Inject] IUserClientService UserClientService { get; set; }
+    [Inject] ILocalStorageService localStorageService { get; set; }
+    [Inject] NavigationManager NavigationManager { get; set; }
+    [Inject] AuthenticationStateProvider authenticationStateProvider { get; set; }
 
     async Task Cancel() => await BlazoredModal.CancelAsync();
 
@@ -75,19 +81,25 @@
     private async void OnValidSubmit(EditContext context)
     {
         //проверка на существующий username
-        User newUser = new User();
-        using (var msg = await Http.PostAsJsonAsync<User>(
-            $"/api/users/registrate?userName={registrationModel.Username}&password={registrationModel.Password}", newUser, System.Threading.CancellationToken.None)
-        )
+        var newUser = new User();
+        newUser.UserName = registrationModel.Username;
+        newUser.Password = registrationModel.Password;
+        var user = await UserClientService.CreateUser(newUser);
+        if (user != null)
         {
-            if (msg.IsSuccessStatusCode)
-            {
-                //await msg.Content.ReadFromJsonAsync<User>();
-                await BlazoredModal.CloseAsync(ModalResult.Ok(true));
-                StateHasChanged();
-            }
+            var customAuthenticationStateProvider = (CustomAuthenticationStateProvider)authenticationStateProvider;
+            await customAuthenticationStateProvider.UpdateAuthenticationState(new UserSession
+                {
+                    UserName = user.UserName,
+                    Id = user.Id
+                });
+            NavigationManager.NavigateTo("/NotesObserver", true);
+            await BlazoredModal.CloseAsync(ModalResult.Ok(true));
         }
-        
+        else
+        {
+            
+        }
     }
 
 }

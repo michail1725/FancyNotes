@@ -5,7 +5,7 @@
 namespace DbAccess.Migrations
 {
     /// <inheritdoc />
-    public partial class FK_fix : Migration
+    public partial class InitDB : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

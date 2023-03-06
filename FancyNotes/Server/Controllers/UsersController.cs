@@ -88,6 +88,7 @@ namespace FancyNotes.Server.Controllers
         {
             try
             {
+                userToCreate.Password = HashGenerator.Generate(userToCreate.Password);
                 var newUser = await _userService.CreateUser(userToCreate);
 
                 if (newUser == null)

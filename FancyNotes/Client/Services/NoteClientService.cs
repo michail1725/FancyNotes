@@ -21,7 +21,7 @@ namespace FancyNotes.Client.Services
         {
             try
             {
-                var response = await _httpClient.PostAsJsonAsync<Note>($"api/users", note);
+                var response = await _httpClient.PostAsJsonAsync<Note>($"api/notes", note);
 
                 if (response.IsSuccessStatusCode)
                 {

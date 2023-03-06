@@ -9,31 +9,23 @@
 <MudButton Variant="Variant.Filled" OnClick="OpenNoteEditor">Создать заметку</MudButton>
 
 @code {
-    [Inject] HttpClient Http { get; set; }
     [Inject] ILocalStorageService localStorageService { get; set; }
     [Inject] NavigationManager NavigationManager { get; set; }
-    [Inject] IUserClientService ClientService { get; set; }
+    [Inject] INoteClientService NoteClientService { get; set; }
 
     public List<Note> noteList { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
-        //try
-        //{
-            await LoadNoteList();
-        //}
-        //catch
-        //{
-        //    Console.WriteLine("Failed to load user's notes...");
-        //}
+        await LoadNoteList();
     }
 
     private async Task LoadNoteList()
     {
         UserSession storagedData = await localStorageService.GetItemAsync<UserSession>("UserSession");
 
-        var s = await ClientService.GetNotesList(storagedData.Id);
-        noteList = s.ToList();
+        var notes = await NoteClientService.GetNotesList(storagedData.Id);
+        noteList = notes.ToList();
     }
 
     public void OpenNoteEditor(int noteId)

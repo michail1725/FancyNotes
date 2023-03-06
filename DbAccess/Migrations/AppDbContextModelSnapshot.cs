@@ -30,6 +30,9 @@ namespace DbAccess.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("ColorFromRGB")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime>("CreationDateTime")
                         .HasColumnType("datetime2");
 
@@ -73,17 +76,12 @@ namespace DbAccess.Migrations
             modelBuilder.Entity("FancyNotes.Shared.Note", b =>
                 {
                     b.HasOne("FancyNotes.Shared.User", "User")
-                        .WithMany("Notes")
+                        .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("FancyNotes.Shared.User", b =>
-                {
-                    b.Navigation("Notes");
                 });
 #pragma warning restore 612, 618
         }

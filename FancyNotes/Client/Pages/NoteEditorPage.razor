@@ -1,28 +1,65 @@
 ﻿@using System.Text.Json;
 @using System.Text.Json.Nodes;
+@using FancyNotes.Client.Services.Contracts;
 @using FancyNotes.Infrastructure;
 @using FancyNotes.Shared;
 @attribute [Authorize]
 @page "/NoteEditor/{noteId?}"
 
-<h3>NoteEditorPage</h3>
 
 <MudButton Variant="Variant.Filled" OnClick="SaveNoteContent">Сохранить</MudButton>
 
-<div id="editor"/>
+<BlazoredTextEditor @ref="@QuillNative"
+                    Placeholder="Напишите что-нибудь хорошее...">
+    <ToolbarContent>
+        <span class="ql-formats">
+            <select class="ql-size">
+                <option value="small"></option>
+                <option selected=""></option>
+                <option value="large"></option>
+                <option value="huge"></option>
+            </select>
+        </span>
+        <span class="ql-formats">
+            <button class="ql-bold"></button>
+            <button class="ql-italic"></button>
+            <button class="ql-underline"></button>
+            <button class="ql-strike"></button>
+        </span>
+        <span class="ql-formats">
+            <select class="ql-color"></select>
+            <select class="ql-background"></select>
+        </span>
+        <span class="ql-formats">
+            <button class="ql-list" value="ordered"></button>
+            <button class="ql-list" value="bullet"></button>
+            <button class="ql-indent" value="-1"></button>
+            <button class="ql-indent" value="+1"></button>
+            <select class="ql-align">
+                <option selected=""></option>
+                <option value="center"></option>
+                <option value="right"></option>
+                <option value="justify"></option>
+            </select>
+        </span>
+        <span class="ql-formats">
+            <button class="ql-link"></button>
+        </span>
+    </ToolbarContent>
+</BlazoredTextEditor>
+
 
 @code {
     [Parameter]
-    public int? noteId { get; set; }
-
+    public string? noteId { get; set; }
     [Inject] ILocalStorageService localStorageService { get; set; }
     [Inject] IJSRuntime jsRuntime { get; set; }
-    [Inject] HttpClient Http { get; set; }
+    [Inject] INoteClientService NoteClientService { get; set; }
+    [Inject] IUserClientService UserClientService { get; set; }
 
     private Note note { get; set; }
     private User noteOwner { get; set; }
-
-    private IJSObjectReference? jsModule;
+    BlazoredTextEditor QuillNative;
 
     protected override async Task OnInitializedAsync()
     {
@@ -40,16 +77,10 @@
     {
         if (firstRender)
         {
-
-            jsModule = await jsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/noteEditor.js");
             if (noteId != null)
             {
-                note = await Http.GetFromJsonAsync<Note>($"/api/notes/byId?id={noteId}");
-                await jsModule.InvokeVoidAsync("CreateNoteEditor", note.NoteBody);
-            }
-            else
-            {
-                await jsModule.InvokeVoidAsync("CreateNoteEditor");           
+                note = await NoteClientService.GetNote(Convert.ToInt32(noteId));
+                await QuillNative.LoadContent(note.NoteBody);
             }
         }
         await base.OnAfterRenderAsync(firstRender);
@@ -57,26 +88,25 @@
 
     private async Task SaveNoteContent()
     {
-        var content = await jsModule.InvokeAsync<JsonNode>("GetEditorContent");
+        var content = await QuillNative.GetContent();
         if (note != null)
         {
-            using (var msg = await Http.PutAsJsonAsync<Note>($"/api/notes/noteUpdate?title={"test"}&body={content["ops"].ToString()}&noteId={note.Id}", note, System.Threading.CancellationToken.None))
-            {
-                if (msg.IsSuccessStatusCode)
-                {
-                    note = await msg.Content.ReadFromJsonAsync<Note>();
-                }
-            }
+            note.Title = "test";
+            note.NoteBody = content;
+            note.User = noteOwner;
+            note.ColorFromRGB = "";
+            note = await NoteClientService.UpdateNote(note);
         }
         else
         {
-            using (var msg = await Http.PostAsJsonAsync<Note>($"/api/notes/noteCreation?title={"test"}&dateTime={DateTime.Now}&body={content["ops"].ToString()}&userId={noteOwner.Id}", note, System.Threading.CancellationToken.None))
-            {
-                if (msg.IsSuccessStatusCode)
-                {
-                    note = await msg.Content.ReadFromJsonAsync<Note>();
-                }
-            }
+            note = new Note();
+            note.Title = "test";
+            note.NoteBody = content;
+            note.CreationDateTime = DateTime.Now;
+            note.ColorFromRGB = "";
+            note.UserId = noteOwner.Id;
+            note.User = noteOwner;
+            note = await NoteClientService.CreateNote(note);
         }
         Console.WriteLine(content.ToString());
     }
@@ -84,7 +114,8 @@
     private async Task LoadUserInfo()
     {
         UserSession storagedData = await localStorageService.GetItemAsync<UserSession>("UserSession");
-        noteOwner = await Http.GetFromJsonAsync<User>($"/api/users/byId?id={storagedData.Id}");
+        noteOwner = await UserClientService.GetUser(storagedData.Id);
     }
 
 }
+

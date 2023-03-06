@@ -1,5 +1,6 @@
 ﻿@page "/"
 @using System.ComponentModel.DataAnnotations;
+@using FancyNotes.Client.Services.Contracts;
 @using FancyNotes.Infrastructure;
 @using FancyNotes.Shared;
 @using Microsoft.AspNetCore.Components.Authorization;
@@ -55,7 +56,7 @@
 
     [Inject] AuthenticationStateProvider authenticationStateProvider { get; set; }
     [Inject] NavigationManager NavigationManager { get; set; }
-    [Inject] HttpClient Http { get; set; }
+    [Inject] IUserClientService UserClientService { get; set; }
 
     LoginForm loginModel = new LoginForm();
 
@@ -86,7 +87,7 @@
     private async Task OnValidSubmit(EditContext context)
     {
         //
-        var user = await Http.GetFromJsonAsync<User>($"/api/users/byLoginData?userName={loginModel.Username}&password={loginModel.Password}");
+        var user = await UserClientService.VerifyUser(loginModel.Username, loginModel.Password);
         if (user != null)
         {
             var customAuthenticationStateProvider = (CustomAuthenticationStateProvider)authenticationStateProvider;
