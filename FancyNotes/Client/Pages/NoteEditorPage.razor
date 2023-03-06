@@ -1,6 +1,90 @@
-﻿@page "/NoteEditor"
-<h3>NodeEditorPage</h3>
+﻿@using System.Text.Json;
+@using System.Text.Json.Nodes;
+@using FancyNotes.Infrastructure;
+@using FancyNotes.Shared;
+@attribute [Authorize]
+@page "/NoteEditor/{noteId?}"
+
+<h3>NoteEditorPage</h3>
+
+<MudButton Variant="Variant.Filled" OnClick="SaveNoteContent">Сохранить</MudButton>
+
+<div id="editor"/>
 
 @code {
+    [Parameter]
+    public int? noteId { get; set; }
+
+    [Inject] ILocalStorageService localStorageService { get; set; }
+    [Inject] IJSRuntime jsRuntime { get; set; }
+    [Inject] HttpClient Http { get; set; }
+
+    private Note note { get; set; }
+    private User noteOwner { get; set; }
+
+    private IJSObjectReference? jsModule;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            await LoadUserInfo();
+        }
+        catch
+        {
+            Console.WriteLine("Failed to load user info...");
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+
+            jsModule = await jsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/noteEditor.js");
+            if (noteId != null)
+            {
+                note = await Http.GetFromJsonAsync<Note>($"/api/notes/byId?id={noteId}");
+                await jsModule.InvokeVoidAsync("CreateNoteEditor", note.NoteBody);
+            }
+            else
+            {
+                await jsModule.InvokeVoidAsync("CreateNoteEditor");           
+            }
+        }
+        await base.OnAfterRenderAsync(firstRender);
+    }
+
+    private async Task SaveNoteContent()
+    {
+        var content = await jsModule.InvokeAsync<JsonNode>("GetEditorContent");
+        if (note != null)
+        {
+            using (var msg = await Http.PutAsJsonAsync<Note>($"/api/notes/noteUpdate?title={"test"}&body={content["ops"].ToString()}&noteId={note.Id}", note, System.Threading.CancellationToken.None))
+            {
+                if (msg.IsSuccessStatusCode)
+                {
+                    note = await msg.Content.ReadFromJsonAsync<Note>();
+                }
+            }
+        }
+        else
+        {
+            using (var msg = await Http.PostAsJsonAsync<Note>($"/api/notes/noteCreation?title={"test"}&dateTime={DateTime.Now}&body={content["ops"].ToString()}&userId={noteOwner.Id}", note, System.Threading.CancellationToken.None))
+            {
+                if (msg.IsSuccessStatusCode)
+                {
+                    note = await msg.Content.ReadFromJsonAsync<Note>();
+                }
+            }
+        }
+        Console.WriteLine(content.ToString());
+    }
+
+    private async Task LoadUserInfo()
+    {
+        UserSession storagedData = await localStorageService.GetItemAsync<UserSession>("UserSession");
+        noteOwner = await Http.GetFromJsonAsync<User>($"/api/users/byId?id={storagedData.Id}");
+    }
 
 }

@@ -1,14 +1,16 @@
 ﻿@page "/"
 @using System.ComponentModel.DataAnnotations;
+@using FancyNotes.Infrastructure;
 @using FancyNotes.Shared;
-@inject HttpClient Http
+@using Microsoft.AspNetCore.Components.Authorization;
 
 <PageTitle>Fancy Notes</PageTitle>
  
+
 <MudPaper Height="900px" Width="100%" >
     <MudContainer Fixed="true">
         <MudText Typo="Typo.h3">Lorem </MudText>
-
+        
         <EditForm Model="@loginModel" OnValidSubmit="OnValidSubmit">
             <DataAnnotationsValidator />
             <MudGrid>
@@ -50,8 +52,13 @@
 
 @code {
     [CascadingParameter] public IModalService Modal { get; set; } = default!;
+
+    [Inject] AuthenticationStateProvider authenticationStateProvider { get; set; }
     [Inject] NavigationManager NavigationManager { get; set; }
+    [Inject] HttpClient Http { get; set; }
+
     LoginForm loginModel = new LoginForm();
+
     bool success;
 
     public class LoginForm
@@ -78,14 +85,22 @@
 
     private async Task OnValidSubmit(EditContext context)
     {
-        if (await Http.GetFromJsonAsync<bool>($"/api/users/byLoginData?userName={loginModel.Username}&password={loginModel.Password}"))
+        //
+        var user = await Http.GetFromJsonAsync<User>($"/api/users/byLoginData?userName={loginModel.Username}&password={loginModel.Password}");
+        if (user != null)
         {
+            var customAuthenticationStateProvider = (CustomAuthenticationStateProvider)authenticationStateProvider;
+            await customAuthenticationStateProvider.UpdateAuthenticationState(new UserSession
+                {
+                    UserName = user.UserName,
+                    Id = user.Id
+                });
             NavigationManager.NavigateTo("/NotesObserver", true);
             StateHasChanged();
         }
         else
         {
-            NavigationManager.NavigateTo("/NoteEditor", true);
+            //NavigationManager.NavigateTo("/NoteEditor", true);
         }
         
     }

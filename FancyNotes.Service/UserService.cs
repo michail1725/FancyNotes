@@ -1,6 +1,6 @@
 ﻿using DbAccess;
 using FancyNotes.Shared;
-using System.Security.Cryptography.X509Certificates;
+using Microsoft.EntityFrameworkCore;
 
 namespace FancyNotes.Service
 {
@@ -13,41 +13,45 @@ namespace FancyNotes.Service
             _context = context;
         }
 
-        public User CreateUser(User user)
+        public async Task<User> CreateUser(User user)
         {
             _context.Users.Add(user);
-            _context.SaveChanges();
+            await _context.SaveChangesAsync();
             return user;
         }
 
-        public void DeleteUser(int id)
+        public async Task DeleteUser(int id)
         {
-            throw new NotImplementedException();
+            var userToDelete = await _context.Users.FindAsync(id);
+            if (userToDelete != null)
+            {
+                _context.Users.Remove(userToDelete);
+                await _context.SaveChangesAsync();
+            }
         }
 
-        public User GetUserById(int id)
+        public async Task<User> GetUserById(int id)
         {
-            throw new NotImplementedException();
+            return await _context.Users.SingleOrDefaultAsync(x => x.Id == id);
         }
 
-        public bool IsUniqUsername(string userName)
+        public Task<bool> IsUniqUsername(string userName)
         {
-            return !_context.Users.Any(x => x.UserName == userName);
+            return Task.FromResult(!_context.Users.Any(x => x.UserName == userName));
         }
 
-        public User UpdateUser(User user)
+        public async Task<User> UpdateUser(User user)
         {
-            throw new NotImplementedException();
+            var updatedUser = _context.Users.Attach(user);
+            updatedUser.State = EntityState.Modified;
+            await _context.SaveChangesAsync();
+            return user;
         }
 
-        public User GetUserByName(string userName)
+        public async Task<User> VerifyLoginData(string userName, string password)
         {
-            throw new NotImplementedException();
+            return await _context.Users.SingleOrDefaultAsync(x => x.UserName == userName && x.Password == password);
         }
 
-        public bool VerifyLoginData(string userName, string password)
-        {
-            return !_context.Users.Any(x => x.UserName == userName && x.Password == password);
-        }
     }
 }

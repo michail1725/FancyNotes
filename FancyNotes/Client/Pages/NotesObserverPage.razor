@@ -1,7 +1,50 @@
 ﻿@page "/NotesObserver"
-<h3>NotesObserverPage</h3>
+@using FancyNotes.Client.Services.Contracts;
+@using FancyNotes.Infrastructure;
+@using FancyNotes.Shared;
+@attribute [Authorize]
 
+
+<h3>NotesObserverPage</h3>
+<MudButton Variant="Variant.Filled" OnClick="OpenNoteEditor">Создать заметку</MudButton>
 
 @code {
+    [Inject] HttpClient Http { get; set; }
+    [Inject] ILocalStorageService localStorageService { get; set; }
+    [Inject] NavigationManager NavigationManager { get; set; }
+    [Inject] IUserClientService ClientService { get; set; }
 
+    public List<Note> noteList { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        //try
+        //{
+            await LoadNoteList();
+        //}
+        //catch
+        //{
+        //    Console.WriteLine("Failed to load user's notes...");
+        //}
+    }
+
+    private async Task LoadNoteList()
+    {
+        UserSession storagedData = await localStorageService.GetItemAsync<UserSession>("UserSession");
+
+        var s = await ClientService.GetNotesList(storagedData.Id);
+        noteList = s.ToList();
+    }
+
+    public void OpenNoteEditor(int noteId)
+    {
+        NavigationManager.NavigateTo($"/NoteEditor/{noteId}", true);
+    }
+
+    public void OpenNoteEditor()
+    {
+        NavigationManager.NavigateTo($"/NoteEditor", true);
+    }
+
+    
 }

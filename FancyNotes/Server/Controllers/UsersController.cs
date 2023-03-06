@@ -1,9 +1,8 @@
-﻿using DbAccess;
-using FancyNotes.Service;
+﻿using FancyNotes.Service;
+using FancyNotes.Server.Utilities;
 using FancyNotes.Shared;
 using Microsoft.AspNetCore.Mvc;
-using NuGet.Protocol.Core.Types;
-using System.Security.Cryptography;
+
 
 namespace FancyNotes.Server.Controllers
 {
@@ -18,39 +17,91 @@ namespace FancyNotes.Server.Controllers
             _userService = userService;
         }
 
-        [HttpGet("byLoginData")]
-        public bool Get(string userName, string password)
+        [HttpGet("{id:int}")]
+        public async Task<ActionResult<User>> GetUser(int id)
         {
-            using (MD5 md5 = MD5.Create())
+            try
             {
-                byte[] inputBytes = System.Text.Encoding.ASCII.GetBytes(password);
-                byte[] hashBytes = md5.ComputeHash(inputBytes);
+                var user = await _userService.GetUserById(id);
 
-                password = Convert.ToHexString(hashBytes);
+                if (user == null)
+                {
+                    return BadRequest();
+                }
+                else
+                {
+                    return Ok(user);
+                }
+
             }
-            return _userService.VerifyLoginData(userName, password);
+            catch (Exception)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                                "Error retrieving data from the database");
+
+            }
         }
 
-        [HttpGet("byUserName")]
-        public bool Get(string userName)
+        [HttpGet("Verify")]
+        public async Task<ActionResult<User>> VerifyLoginData(string userName, string password)
         {
-            return _userService.IsUniqUsername(userName);
-        }
-
-        [HttpPost("registrate")]
-        public User Post(string userName, string password) 
-        { 
-            User newUser = new User();
-            newUser.UserName = userName;
-            using (MD5 md5 = MD5.Create())
+            password = HashGenerator.Generate(password);
+            try
             {
-                byte[] inputBytes = System.Text.Encoding.ASCII.GetBytes(password);
-                byte[] hashBytes = md5.ComputeHash(inputBytes);
+                var user = await _userService.VerifyLoginData(userName, password);
 
-                password = Convert.ToHexString(hashBytes);
+                if (user == null)
+                {
+                    return BadRequest();
+                }
+                else
+                {
+                    return Ok(user);
+                }
+
             }
-            newUser.Password = password;
-            return _userService.CreateUser(newUser);
+            catch (Exception)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                                "Error retrieving data from the database");
+            }
         }
+
+        [HttpGet("Check")]
+        public async Task<ActionResult<bool>> CheckUniqUsername(string userName)
+        {
+            try
+            {
+                    return Ok( await _userService.IsUniqUsername(userName));
+            }
+            catch (Exception)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                                "Error retrieving data from the database");
+            }
+        }
+
+        
+
+        [HttpPost]
+        public async Task<ActionResult<User>> CreateNewUser([FromBody] User userToCreate) 
+        {
+            try
+            {
+                var newUser = await _userService.CreateUser(userToCreate);
+
+                if (newUser == null)
+                {
+                    return NoContent();
+                }
+
+                return CreatedAtAction(nameof(GetUser), new { id = newUser.Id }, newUser);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
+            }
+        }
+
     }
 }
