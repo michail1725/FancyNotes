@@ -8,45 +8,34 @@
 <PageTitle>Fancy Notes</PageTitle>
  
 
-<MudPaper Height="900px" Width="100%" >
-    <MudContainer Fixed="true">
-        <MudText Typo="Typo.h3">Lorem </MudText>
-        
+<MudPaper Height="900px" Width="100%" Style="align-content:center;display:flex;justify-content:center;align-items:center;flex-direction:column ">
+    <AuthorizeView>
+    <NotAuthorized Context="notAuth">
+    <MudContainer Fixed="true" Style="">       
         <EditForm Model="@loginModel" OnValidSubmit="OnValidSubmit">
             <DataAnnotationsValidator />
-            <MudGrid>
-                <MudItem xs="12" sm="7">
-                    <MudCard>
-                        <MudCardContent>
-                            <MudTextField Label="Имя пользователя:" @bind-Value="loginModel.Username" For="@(() => loginModel.Username)" />
-                            <MudTextField Label="Пароль:" Class="mt-3"
-                                          @bind-Value="loginModel.Password" For="@(() => loginModel.Password)" InputType="InputType.Password" />
-                        </MudCardContent>
-                        <MudCardActions>
-                            <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto">Войти</MudButton>
-                            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto" OnClick=@ShowModal>Зарегистрироваться</MudButton>
-                        </MudCardActions>
-                    </MudCard>
-                </MudItem>
-                <MudItem xs="12" sm="5">
-                    <MudPaper Class="pa-4 mud-height-full">
-                        <MudText Typo="Typo.subtitle2">Validation Summary</MudText>
-                        @if (success)
-                        {
-                            <MudText Color="Color.Success">Success</MudText>
-                        }
-                        else
-                        {
-                            <MudText Color="@Color.Error">
-                                <ValidationSummary />
-                            </MudText>
-                        }
-                    </MudPaper>
-                </MudItem>
-            </MudGrid>
+               <MudCard Style="max-width:500px; margin:auto">
+                   <MudText Typo="Typo.h6" Align="Align.Center">Перед использованием приложения необходимо пройти авторизацию или зарегистрироваться</MudText>
+                   <MudCardContent>
+                       <MudTextField Label="Имя пользователя:" @bind-Value="loginModel.Username" For="@(() => loginModel.Username)" />
+                       <MudTextField Label="Пароль:" Class="mt-3"
+                                     @bind-Value="loginModel.Password" For="@(() => loginModel.Password)" InputType="InputType.Password" />
+                   </MudCardContent>
+                   <MudCardActions>
+                       <MudButton Variant="Variant.Outlined" Color="Color.Primary" Class="ml-auto" OnClick=@ShowModal>Зарегистрироваться</MudButton>
+                       <MudSpacer></MudSpacer>
+                       <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto">Войти</MudButton>
+                   </MudCardActions>
+               </MudCard>
         </EditForm>
-        
     </MudContainer>
+    </NotAuthorized>
+    <Authorized>
+        <MudAvatar Style="width:250px;height:250px;font-size:5rem" Color="Color.Secondary">@userNameChar</MudAvatar>
+        <MudText Typo="Typo.h4">Приветствую, @userName!</MudText>
+            <MudButton Style="margin-top:50px" Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Large" OnClick="ShowNotesList">Перейти к списку заметок</MudButton>
+    </Authorized>
+    </AuthorizeView>
 </MudPaper>
 
 
@@ -57,21 +46,33 @@
     [Inject] AuthenticationStateProvider authenticationStateProvider { get; set; } = default!;
     [Inject] NavigationManager NavigationManager { get; set; } = default!;
     [Inject] IUserClientService UserClientService { get; set; } = default!;
+    [Inject] ILocalStorageService localStorageService { get; set; } = default!;
+    [Inject] ISnackbar Snackbar { get; set; } = default!;
 
     LoginForm loginModel = new LoginForm();
 
-    bool success;
+    string? userName;
+    char userNameChar;
+
+    protected override async Task OnInitializedAsync()
+    {
+        UserSession storagedData = await localStorageService.GetItemAsync<UserSession>("UserSession");
+        if (storagedData != null)
+        {
+            userName = storagedData.UserName;
+            userNameChar = storagedData.UserName.ToUpper()[0];
+        }
+    }
 
     public class LoginForm
     {
-        [Required]
-        //[StringLength(8, ErrorMessage = "Name length can't be more than 8.")]
+        [Required(ErrorMessage = "Введите имя пользователя!")]
+        [StringLength(10, ErrorMessage = "Имя не может быть пустым или содержать более 10 знаков", MinimumLength = 1)]
         public string? Username { get; set; }
 
-        [Required]
-        //[StringLength(30, ErrorMessage = "Password must be at least 8 characters long.", MinimumLength = 8)]
+        [Required(ErrorMessage = "Необходимо ввести пароль!")]
+        [StringLength(30, ErrorMessage = "Пароль должен содержать от 4 до 30 знаков", MinimumLength = 4)]
         public string? Password { get; set; }
-
     }
 
     async void ShowModal()
@@ -80,13 +81,17 @@
         var result = await messageForm.Result;
         if (!result.Cancelled)
         {
-            NavigationManager.NavigateTo("/NotesObserver", true);
+            ShowNotesList();
         }
+    }
+
+    private void ShowNotesList()
+    {
+        NavigationManager.NavigateTo("/NotesObserver", true);
     }
 
     private async Task OnValidSubmit(EditContext context)
     {
-        //
         var user = await UserClientService.VerifyUser(loginModel.Username, loginModel.Password);
         if (user != null)
         {
@@ -96,12 +101,16 @@
                     UserName = user.UserName,
                     Id = user.Id
                 });
-            NavigationManager.NavigateTo("/NotesObserver", true);
+            ShowNotesList();
             StateHasChanged();
         }
         else
         {
-            //NavigationManager.NavigateTo("/NoteEditor", true);
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.BottomCenter;
+            Snackbar.Add("Неправильное имя пользователя или пароль. Проверьте данные авторизации", Severity.Error, (options) =>
+            {
+                options.CloseAfterNavigation = true;
+            });
         }
         
     }

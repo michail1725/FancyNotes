@@ -1,8 +1,6 @@
 ﻿using FancyNotes.Client.Services.Contracts;
 using FancyNotes.Shared;
-using System.Net.Http;
 using System.Net.Http.Json;
-using System.Text.Json.Serialization;
 using System.Text;
 using System.Text.Json;
 
@@ -45,7 +43,7 @@ namespace FancyNotes.Client.Services
             }
         }
 
-        public async Task DeleteItem(int noteId)
+        public async Task DeleteNote(int noteId)
         {
             try
             {

@@ -1,8 +1,6 @@
 ﻿using FancyNotes.Service;
 using FancyNotes.Shared;
 using Microsoft.AspNetCore.Mvc;
-using System.Text.Json;
-using System.Text.Json.Nodes;
 
 namespace FancyNotes.Server.Controllers
 {

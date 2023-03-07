@@ -1,9 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+
 
 namespace FancyNotes.Shared
 {
@@ -11,8 +8,10 @@ namespace FancyNotes.Shared
     {
         public int Id { get; set; }
         public DateTime CreationDateTime{ get; set; }
+        [MaxLength(50)]
         public string? Title { get; set; }
         public string? NoteBody { get; set; }
+        [MaxLength(9)]
         public string? ColorFromRGB { get; set; }
         public int UserId { get; set; }
 

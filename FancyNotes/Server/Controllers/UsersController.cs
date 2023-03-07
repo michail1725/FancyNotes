@@ -50,15 +50,7 @@ namespace FancyNotes.Server.Controllers
             {
                 var user = await _userService.VerifyLoginData(userName, password);
 
-                if (user == null)
-                {
-                    return BadRequest();
-                }
-                else
-                {
-                    return Ok(user);
-                }
-
+                return Ok(user);
             }
             catch (Exception)
             {

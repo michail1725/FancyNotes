@@ -11,7 +11,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FancyNotes.Shared", "FancyN
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DbAccess", "DbAccess\DbAccess.csproj", "{3F21C887-13FB-4F1B-94F9-0AE411A995BC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FancyNotes.Service", "FancyNotes.Service\FancyNotes.Service.csproj", "{6F2AC795-BB0C-457F-80AC-9483F5ADAB27}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FancyNotes.Service", "FancyNotes.Service\FancyNotes.Service.csproj", "{6F2AC795-BB0C-457F-80AC-9483F5ADAB27}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

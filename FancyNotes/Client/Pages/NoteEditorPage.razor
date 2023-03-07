@@ -8,81 +8,109 @@
 @page "/NoteEditor/{noteId?}"
 
 <style>
-    body {
+    .ed-base {
+        padding : 15px;
         background-color: @_pickerColor.Value;
-        opacity: 90%
+        margin-top: 5px;
+    }
+
+    .ql-editor {
+        min-height:680px
     }
 </style>
 
+<MudPaper Elevation="4" Height="100%" Width="100%" Class="ed-base" >
+    <MudPaper Elevation="0" Style="padding:20px">
 <MudStack Row="true" AlignItems="AlignItems.Stretch">
     <MudStack Row="true" AlignItems="AlignItems.Stretch">
-        <MudTextField @bind-Value="TextValue" Label="Заголовок заметки" Variant="Variant.Outlined"></MudTextField>
-        <MudIconButton Icon="@Icons.Material.Filled.ColorLens" Color="Color.Dark" Size="Size.Medium" OnClick="@ToggleOpen">@(_isOpen ? "Close" : "Open")</MudIconButton>
-            <MudPopover Open="_isOpen" OverflowBehavior="OverflowBehavior.FlipAlways" AnchorOrigin="Origin.BottomCenter" TransformOrigin="Origin.TopCenter" Paper="false">
-                <MudItem md="8" Class="d-flex justify-center">
-                    <MudColorPicker Value="_pickerColor" DisableToolbar="false" DisableAlpha="true" DisableColorField="false" DisablePreview="false" DisableSliders="true" DisableInputs="true" DisableModeSwitch="true" ColorPickerMode="ColorPickerMode.HEX" PickerVariant="PickerVariant.Static" />
-                </MudItem>
-            </MudPopover>
+        <MudButton StartIcon="@Icons.Material.Filled.ArrowBackIos" OnClick="ReturnToNotesList">Вернуться к списку</MudButton>
     </MudStack>
+    <MudSpacer />
     <MudStack Row="true" AlignItems="AlignItems.Stretch">
-        <MudButton Variant="Variant.Outlined" Color="Color.Error">Удалить заметку</MudButton>
-        <MudButton Variant="Variant.Filled" OnClick="SaveNoteContent">Сохранить</MudButton>
+            <MudButton Disabled="IsDeleteDisabled" OnClick="DeleteThisNote" Variant="Variant.Outlined" Color="Color.Error">Удалить заметку</MudButton>
+            <MudButton Variant="Variant.Filled" EndIcon="@Icons.Material.Filled.Save" OnClick="SaveNoteContent">Сохранить</MudButton>
     </MudStack>
 </MudStack>
 
+ <MudMessageBox @ref="del_mbox" Title="Внимание" CancelText="Нет, это ошибка">
+     <MessageContent>
+         Заметка удалится без возможности восстановления! Вы уверены, что хотите продолжить?
+     </MessageContent>
+     <YesButton>
+         <MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Filled.DeleteForever">Да</MudButton>
+     </YesButton>
+ </MudMessageBox>
 
-<BlazoredTextEditor @ref="@QuillNative"
-                    Placeholder="Здесь можно чего-нибудь написать...">
-    <ToolbarContent>
-        <span class="ql-formats">
-            <select class="ql-size">
-                <option value="small"></option>
-                <option selected=""></option>
-                <option value="large"></option>
-                <option value="huge"></option>
-            </select>
-        </span>
-        <span class="ql-formats">
-            <button class="ql-bold"></button>
-            <button class="ql-italic"></button>
-            <button class="ql-underline"></button>
-            <button class="ql-strike"></button>
-        </span>
-        <span class="ql-formats">
-            <select class="ql-color"></select>
-            <select class="ql-background"></select>
-        </span>
-        <span class="ql-formats">
-            <button class="ql-list" value="ordered"></button>
-            <button class="ql-list" value="bullet"></button>
-            <button class="ql-indent" value="-1"></button>
-            <button class="ql-indent" value="+1"></button>
-            <select class="ql-align">
-                <option selected=""></option>
-                <option value="center"></option>
-                <option value="right"></option>
-                <option value="justify"></option>
-            </select>
-        </span>
-    </ToolbarContent>
-</BlazoredTextEditor>
+<MudStack Row="true" Style="padding-top:5px;padding-bottom:5px">
+    <MudIconButton Icon="@Icons.Material.Filled.ColorLens" Color="Color.Dark" Size="Size.Large" OnClick="@ToggleOpen">@(_isOpen ? "Close" : "Open")</MudIconButton>
+        <MudPopover Open="_isOpen" OverflowBehavior="OverflowBehavior.FlipOnOpen" AnchorOrigin="Origin.TopCenter" TransformOrigin="Origin.BottomRight" Paper="false">
+            <MudItem md="8" Class="d-flex justify-center">
+                <MudColorPicker Value="_pickerColor" ValueChanged="@((MudColor newColor) => OnColorInput(newColor))" DisableToolbar="false" DisableAlpha="true" DisableColorField="false" DisablePreview="false" DisableSliders="true" DisableInputs="true" DisableModeSwitch="true" ColorPickerMode="ColorPickerMode.HEX" PickerVariant="PickerVariant.Static" />
+            </MudItem>
+        </MudPopover>
+                <MudTextField @bind-Value="titleTextValue" Label="Заголовок" Variant="Variant.Outlined" Counter="50" MaxLength="50"></MudTextField>
+</MudStack>
+ <BlazoredTextEditor @ref="@QuillNative" 
+                        Placeholder="Здесь можно чего-нибудь написать...">
+            <ToolbarContent>
+                <span class="ql-formats">
+                    <select class="ql-size">
+                        <option value="small"></option>
+                        <option selected=""></option>
+                        <option value="large"></option>
+                        <option value="huge"></option>
+                    </select>
+                </span>
+                <span class="ql-formats">
+                    <button class="ql-bold"></button>
+                    <button class="ql-italic"></button>
+                    <button class="ql-underline"></button>
+                    <button class="ql-strike"></button>
+                </span>
+                <span class="ql-formats">
+                    <select class="ql-color"></select>
+                    <select class="ql-background"></select>
+                </span>
+                <span class="ql-formats">
+                    <button class="ql-list" value="ordered"></button>
+                    <button class="ql-list" value="bullet"></button>
+                    <button class="ql-indent" value="-1"></button>
+                    <button class="ql-indent" value="+1"></button>
+                    <select class="ql-align">
+                        <option selected=""></option>
+                        <option value="center"></option>
+                        <option value="right"></option>
+                        <option value="justify"></option>
+                    </select>
+                </span>
+            </ToolbarContent>
+        </BlazoredTextEditor>
+        </MudPaper>
+    </MudPaper>
 
 
     @code {
     [Parameter]
     public string? noteId { get; set; }
+
     [Inject] ILocalStorageService localStorageService { get; set; } = default!;
     [Inject] IJSRuntime jsRuntime { get; set; } = default!; 
     [Inject] INoteClientService NoteClientService { get; set; } = default!;
     [Inject] IUserClientService UserClientService { get; set; } = default!;
+    [Inject] ISnackbar Snackbar { get; set; } = default!;
+    [Inject] NavigationManager NavigationManager { get; set; } = default!;
+    [Inject] IDialogService DialogService { get; set; } = default!;
 
+    MudMessageBox del_mbox { get; set; } = default!;
     private Note note { get; set; } = default!; 
     private User noteOwner { get; set; } = default!;
-    public string TextValue { get; set; } = default!;
+    public string titleTextValue { get; set; } = default!;
     BlazoredTextEditor QuillNative = default!;
-    public MudColor _pickerColor = "#ffffffff";
+
+    public MudColor _pickerColor = new MudColor("#ffffff");
 
     public bool _isOpen = false;
+    public bool IsDeleteDisabled = true;
 
     public void ToggleOpen()
     {
@@ -92,16 +120,15 @@
             _isOpen = true;
     }
 
+    private async Task OnColorInput(MudColor newColor)
+    {
+        _pickerColor = newColor;
+        StateHasChanged();
+    }
+
     protected override async Task OnInitializedAsync()
     {
-        try
-        {
-            await LoadUserInfo();
-        }
-        catch
-        {
-            Console.WriteLine("Failed to load user info...");
-        }
+        await LoadUserInfo();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -112,7 +139,13 @@
             {
                 note = await NoteClientService.GetNote(Convert.ToInt32(noteId));
                 _pickerColor = new MudColor(note.ColorFromRGB);
+                titleTextValue = note.Title;
                 await QuillNative.LoadContent(note.NoteBody);
+                IsDeleteDisabled = false;
+            }
+            else
+            {
+                titleTextValue = "Новая заметка";
             }
         }
         await base.OnAfterRenderAsync(firstRender);
@@ -120,27 +153,69 @@
 
     private async Task SaveNoteContent()
     {
-        var content = await QuillNative.GetContent();
-        if (note != null)
+        try
         {
-            note.Title = "test";
-            note.NoteBody = content;
-            note.User = noteOwner;
-            note.ColorFromRGB = _pickerColor.Value;
-            note = await NoteClientService.UpdateNote(note);
+            var content = await QuillNative.GetContent();
+            if (note != null)
+            {
+                note.Title = titleTextValue;
+                note.NoteBody = content;
+                note.User = noteOwner;
+                note.ColorFromRGB = _pickerColor.Value;
+                note = await NoteClientService.UpdateNote(note);
+                AddCloseAfterNavSnackbar("Заметка успешно сохранена!", Severity.Success);
+            }
+            else
+            {
+                note = new Note();
+                note.Title = titleTextValue;
+                note.NoteBody = content;
+                note.CreationDateTime = DateTime.Now;
+                note.ColorFromRGB = _pickerColor.Value;
+                note.UserId = noteOwner.Id;
+                note.User = noteOwner;
+                note = await NoteClientService.CreateNote(note);
+                AddCloseAfterNavSnackbar("Заметка успешно создана!", Severity.Info);
+                IsDeleteDisabled = false;
+            }
         }
-        else
+        catch
         {
-            note = new Note();
-            note.Title = "test";
-            note.NoteBody = content;
-            note.CreationDateTime = DateTime.Now;
-            note.ColorFromRGB = _pickerColor.Value;
-            note.UserId = noteOwner.Id;
-            note.User = noteOwner;
-            note = await NoteClientService.CreateNote(note);
+            AddCloseAfterNavSnackbar("Возникла ошибка при сохранении заметки", Severity.Error);
         }
-        Console.WriteLine(content.ToString());
+    }
+
+    private async Task DeleteThisNote()
+    {
+        bool? result = await del_mbox.Show();
+        if (result != null)
+        {
+            try
+            {
+                await NoteClientService.DeleteNote(note.Id);
+                NavigationManager.NavigateTo($"/NotesObserver", true);
+            }
+            catch
+            {
+                AddCloseAfterNavSnackbar("Возникла ошибка при удалении заметки", Severity.Error);
+            }
+        }
+    }
+
+    private async void ReturnToNotesList()
+    {
+        var parameters = new DialogParameters();
+        parameters.Add("ContentText", "Сохранить заметку перед выходом? Несохраненные изменения будут утеряны");
+        parameters.Add("ButtonText", "Сохранить");
+        parameters.Add("Color", Color.Info);
+
+        var dialog = await DialogService.ShowAsync<OnEditorQuitDialog>("Предупреждение", parameters);
+        var result = await dialog.Result;
+        if (!result.Cancelled)
+        {
+            await SaveNoteContent();
+        }
+        NavigationManager.NavigateTo($"/NotesObserver", true);
     }
 
     private async Task LoadUserInfo()
@@ -149,5 +224,13 @@
         noteOwner = await UserClientService.GetUser(storagedData.Id);
     }
 
+    public void AddCloseAfterNavSnackbar(string message, Severity severity)
+    {
+        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.BottomRight;
+        Snackbar.Add(message, severity, (options) =>
+        {
+            options.CloseAfterNavigation = true;
+        });
+    }
 }
 
