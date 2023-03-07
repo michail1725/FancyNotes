@@ -4,11 +4,17 @@
     <MudAppBar Elevation="0">
         <MudText Typo="Typo.h4" Color="Color.Default" >Fancy Notes</MudText>
         <MudSpacer />
-        <MudIconButton Icon="@Icons.Custom.Brands.MudBlazor" Color="Color.Inherit" Href="https://mudblazor.com/" Target="_blank" />
-        <MudIconButton Icon="@Icons.Custom.Brands.GitHub" Color="Color.Inherit" Href="https://github.com/MudBlazor/MudBlazor/" Target="_blank" />
+        <MudMenu FullWidth="false" AnchorOrigin="Origin.BottomCenter" TransformOrigin="Origin.TopRight">
+            <ActivatorContent>
+                <MudAvatar Color="Color.Secondary">U</MudAvatar>
+            </ActivatorContent>
+            <ChildContent>
+                <MudMenuItem>Выйти</MudMenuItem>
+            </ChildContent>
+        </MudMenu>
     </MudAppBar>
     <MudMainContent>
-        <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="my-5">
+        <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="my-0">
             @Body
         </MudContainer>
     </MudMainContent>

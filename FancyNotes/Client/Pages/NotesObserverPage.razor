@@ -4,16 +4,54 @@
 @using FancyNotes.Shared;
 @attribute [Authorize]
 
+<MudPaper Height="60px" Style="align-content:end">
+    <MudStack Row="true" Justify="Justify.SpaceBetween">
+        <MudText>Список заметок:</MudText>
+        <MudButton Variant="Variant.Filled" OnClick="OpenNoteEditor" >Создать заметку</MudButton>
+    </MudStack>
+</MudPaper>
 
-<h3>NotesObserverPage</h3>
-<MudButton Variant="Variant.Filled" OnClick="OpenNoteEditor">Создать заметку</MudButton>
+<MudPaper MinHeight="850px" Width="100%" Style="text-align:center" >
+    <MudContainer Fixed="true">
+        @if (noteList.Count == 0)
+        {
+            <MudText Style="font-size:larger" >Список заметок пуст! Хороший повод, чтобы создать новую заметку...</MudText>
+        }
+        else
+        {
+            <MudGrid>
+            @foreach (Note note in noteList)
+            {
+                    <MudItem xs="12">
+                        <MudPaper Elevation="4" Width="100%" Height="100px" Class="align-center mud-width-full">
+                            <MudStack Row="true" Style="height:100%" Justify="Justify.SpaceBetween">
+                                <MudPaper Elevation="0">
+                                    <MudText Style="font-size:small">Заметка создана:<br/>@note.CreationDateTime.ToString("yyyy'.'MM'.'dd")</MudText>
+                                </MudPaper>
+                                <MudPaper Elevation="0">
+                                    <MudText Style="font-size:larger margin-top:40px" Align="Align.Center">@note.Title</MudText>
+                                </MudPaper>
+                                <MudStack Justify="Justify.SpaceBetween">
+                                    <MudPaper Elevation="0">
+                                        <MudIconButton Style="margin-left:38px" Icon="@Icons.Material.Filled.Delete" Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small" OnClick="@((e)=> DeleteNote(@note.Id))" />
+                                    </MudPaper>
+                                    <MudButton Size="Size.Small" OnClick="@((e)=> OpenNoteEditor(@note.Id))">Открыть</MudButton>
+                                </MudStack>
+                            </MudStack>    
+                        </MudPaper>
+                    </MudItem>
+            }
+            </MudGrid>
+        }
+    </MudContainer>
+</MudPaper>
 
 @code {
-    [Inject] ILocalStorageService localStorageService { get; set; }
-    [Inject] NavigationManager NavigationManager { get; set; }
-    [Inject] INoteClientService NoteClientService { get; set; }
+    [Inject] ILocalStorageService localStorageService { get; set; } = default!;
+    [Inject] NavigationManager NavigationManager { get; set; } = default!;
+    [Inject] INoteClientService NoteClientService { get; set; } = default!;
 
-    public List<Note> noteList { get; set; }
+    public List<Note> noteList { get; set; } = new List<Note>();
 
     protected override async Task OnInitializedAsync()
     {
@@ -26,6 +64,13 @@
 
         var notes = await NoteClientService.GetNotesList(storagedData.Id);
         noteList = notes.ToList();
+    }
+
+    public async Task DeleteNote(int noteId)
+    {
+        noteList.Remove(noteList.SingleOrDefault(x => x.Id == noteId));
+        await NoteClientService.DeleteItem(noteId);
+        StateHasChanged();
     }
 
     public void OpenNoteEditor(int noteId)

@@ -3,14 +3,36 @@
 @using FancyNotes.Client.Services.Contracts;
 @using FancyNotes.Infrastructure;
 @using FancyNotes.Shared;
+@using MudBlazor.Utilities;
 @attribute [Authorize]
 @page "/NoteEditor/{noteId?}"
 
+<style>
+    body {
+        background-color: @_pickerColor.Value;
+        opacity: 90%
+    }
+</style>
 
-<MudButton Variant="Variant.Filled" OnClick="SaveNoteContent">Сохранить</MudButton>
+<MudStack Row="true" AlignItems="AlignItems.Stretch">
+    <MudStack Row="true" AlignItems="AlignItems.Stretch">
+        <MudTextField @bind-Value="TextValue" Label="Заголовок заметки" Variant="Variant.Outlined"></MudTextField>
+        <MudIconButton Icon="@Icons.Material.Filled.ColorLens" Color="Color.Dark" Size="Size.Medium" OnClick="@ToggleOpen">@(_isOpen ? "Close" : "Open")</MudIconButton>
+            <MudPopover Open="_isOpen" OverflowBehavior="OverflowBehavior.FlipAlways" AnchorOrigin="Origin.BottomCenter" TransformOrigin="Origin.TopCenter" Paper="false">
+                <MudItem md="8" Class="d-flex justify-center">
+                    <MudColorPicker Value="_pickerColor" DisableToolbar="false" DisableAlpha="true" DisableColorField="false" DisablePreview="false" DisableSliders="true" DisableInputs="true" DisableModeSwitch="true" ColorPickerMode="ColorPickerMode.HEX" PickerVariant="PickerVariant.Static" />
+                </MudItem>
+            </MudPopover>
+    </MudStack>
+    <MudStack Row="true" AlignItems="AlignItems.Stretch">
+        <MudButton Variant="Variant.Outlined" Color="Color.Error">Удалить заметку</MudButton>
+        <MudButton Variant="Variant.Filled" OnClick="SaveNoteContent">Сохранить</MudButton>
+    </MudStack>
+</MudStack>
+
 
 <BlazoredTextEditor @ref="@QuillNative"
-                    Placeholder="Напишите что-нибудь хорошее...">
+                    Placeholder="Здесь можно чего-нибудь написать...">
     <ToolbarContent>
         <span class="ql-formats">
             <select class="ql-size">
@@ -42,24 +64,33 @@
                 <option value="justify"></option>
             </select>
         </span>
-        <span class="ql-formats">
-            <button class="ql-link"></button>
-        </span>
     </ToolbarContent>
 </BlazoredTextEditor>
 
 
-@code {
+    @code {
     [Parameter]
     public string? noteId { get; set; }
-    [Inject] ILocalStorageService localStorageService { get; set; }
-    [Inject] IJSRuntime jsRuntime { get; set; }
-    [Inject] INoteClientService NoteClientService { get; set; }
-    [Inject] IUserClientService UserClientService { get; set; }
+    [Inject] ILocalStorageService localStorageService { get; set; } = default!;
+    [Inject] IJSRuntime jsRuntime { get; set; } = default!; 
+    [Inject] INoteClientService NoteClientService { get; set; } = default!;
+    [Inject] IUserClientService UserClientService { get; set; } = default!;
 
-    private Note note { get; set; }
-    private User noteOwner { get; set; }
-    BlazoredTextEditor QuillNative;
+    private Note note { get; set; } = default!; 
+    private User noteOwner { get; set; } = default!;
+    public string TextValue { get; set; } = default!;
+    BlazoredTextEditor QuillNative = default!;
+    public MudColor _pickerColor = "#ffffffff";
+
+    public bool _isOpen = false;
+
+    public void ToggleOpen()
+    {
+        if (_isOpen)
+            _isOpen = false;
+        else
+            _isOpen = true;
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -80,6 +111,7 @@
             if (noteId != null)
             {
                 note = await NoteClientService.GetNote(Convert.ToInt32(noteId));
+                _pickerColor = new MudColor(note.ColorFromRGB);
                 await QuillNative.LoadContent(note.NoteBody);
             }
         }
@@ -94,7 +126,7 @@
             note.Title = "test";
             note.NoteBody = content;
             note.User = noteOwner;
-            note.ColorFromRGB = "";
+            note.ColorFromRGB = _pickerColor.Value;
             note = await NoteClientService.UpdateNote(note);
         }
         else
@@ -103,7 +135,7 @@
             note.Title = "test";
             note.NoteBody = content;
             note.CreationDateTime = DateTime.Now;
-            note.ColorFromRGB = "";
+            note.ColorFromRGB = _pickerColor.Value;
             note.UserId = noteOwner.Id;
             note.User = noteOwner;
             note = await NoteClientService.CreateNote(note);

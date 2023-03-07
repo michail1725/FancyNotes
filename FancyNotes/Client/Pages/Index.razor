@@ -54,9 +54,9 @@
 @code {
     [CascadingParameter] public IModalService Modal { get; set; } = default!;
 
-    [Inject] AuthenticationStateProvider authenticationStateProvider { get; set; }
-    [Inject] NavigationManager NavigationManager { get; set; }
-    [Inject] IUserClientService UserClientService { get; set; }
+    [Inject] AuthenticationStateProvider authenticationStateProvider { get; set; } = default!;
+    [Inject] NavigationManager NavigationManager { get; set; } = default!;
+    [Inject] IUserClientService UserClientService { get; set; } = default!;
 
     LoginForm loginModel = new LoginForm();
 
