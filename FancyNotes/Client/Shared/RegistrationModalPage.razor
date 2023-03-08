@@ -1,0 +1,152 @@
+﻿@using System.ComponentModel.DataAnnotations
+@using FancyNotes.Client.Services.Contracts;
+@using FancyNotes.Infrastructure;
+@using FancyNotes.Shared
+@inject IModalService ModalService
+
+
+
+<EditForm Model="@registrationModel" OnValidSubmit="OnValidSubmit">
+    <DataAnnotationsValidator />
+    <MudGrid>
+        <MudItem xs="12" sm="7">
+            <MudCard>
+                <MudCardContent>
+                    <MudTextField Label="Имя пользователя" HelperText="Максимум 10 знаков"
+                                  Value="registrationModel.Username" For="@(() => registrationModel.Username)" ValueChanged="@((String newUsername) => OnUserNameInput(newUsername))" />
+                    <MudTextField Label="Пароль" HelperText="Минимум 4 знака" Class="mt-3"
+                                  @bind-Value="registrationModel.Password" For="@(() => registrationModel.Password)" InputType="InputType.Password" />
+                    <MudTextField Label="Повторите пароль" HelperText="Повторите введенный пароль" Class="mt-3"
+                                  @bind-Value="registrationModel.Password2" For="@(() => registrationModel.Password2)" InputType="InputType.Password" />
+                </MudCardContent>
+                <MudCardActions Style="display:flex">
+                    <MudButton Style="margin:auto" ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto">Зарегистрироваться</MudButton>
+                </MudCardActions>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" sm="5">
+            <MudPaper Class="pa-4 mud-height-full">
+                <MudText Typo="Typo.subtitle2">Валидация данных</MudText>
+                @if (success && IsUniqUserName)
+                {
+                    <MudText Color="Color.Success">Валидация пройдена</MudText>
+                }
+                else
+                {
+                    @if (!IsUniqUserName)
+                    {
+                        <MudText Color="@Color.Error">Пользователь с таким именем уже существует</MudText>
+                    }
+                    <MudText Color="@Color.Error">
+                        <ValidationSummary />
+                    </MudText>
+                }
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12">
+            <MudText Typo="Typo.body2" Align="Align.Center">
+                После успешной регистрации Вы получите доступ к списку заметок
+            </MudText>
+        </MudItem>
+    </MudGrid>
+</EditForm>
+
+
+@code {
+
+    [CascadingParameter] BlazoredModalInstance BlazoredModal { get; set; } = default!;
+    [Inject] IUserClientService UserClientService { get; set; } = default!;
+    [Inject] ILocalStorageService localStorageService { get; set; } = default!;
+    [Inject] NavigationManager NavigationManager { get; set; } = default!;
+    [Inject] AuthenticationStateProvider authenticationStateProvider { get; set; } = default!;
+    [Inject] ISnackbar Snackbar { get; set; } = default!;
+    [Inject] INoteClientService NoteClientService { get; set; } = default!;
+
+    async Task Cancel() => await BlazoredModal.CancelAsync();
+
+    RegisterAccountForm registrationModel = new RegisterAccountForm();
+    bool success;
+    bool IsUniqUserName = true;
+
+    public class RegisterAccountForm
+    {
+        [Required(ErrorMessage = "Введите имя пользователя!")]
+        [StringLength(10, ErrorMessage = "Имя не может быть пустым или содержать более 10 знаков", MinimumLength = 1)]
+        public string? Username { get; set; }
+
+        [Required(ErrorMessage = "Необходимо ввести пароль!")]
+        [StringLength(30, ErrorMessage = "Пароль должен содержать от 4 до 30 знаков", MinimumLength = 4)]
+        public string? Password { get; set; }
+
+        [Required(ErrorMessage = "Необходимо ввести проверочный пароль!")]
+        [Compare(nameof(Password), ErrorMessage = "Введеные пароли не совпадают")]
+        public string Password2 { get; set; } = default!;
+
+    }
+
+    private async Task OnValidSubmit(EditContext context)
+    {
+        success = true;
+        if (success && IsUniqUserName)
+        {
+            StateHasChanged();
+            try
+            {
+                var newUser = new User();
+                newUser.UserName = registrationModel.Username;
+                newUser.Password = registrationModel.Password;
+                var user = await UserClientService.CreateUser(newUser);
+
+                var customAuthenticationStateProvider = (CustomAuthenticationStateProvider)authenticationStateProvider;
+                await customAuthenticationStateProvider.UpdateAuthenticationState(new UserSession
+                    {
+                        UserName = user.UserName,
+                        Id = user.Id
+                    });
+                await CreateIntroNote(user);
+                await BlazoredModal.CloseAsync(ModalResult.Ok(true));
+                NavigationManager.NavigateTo("/NotesObserver", true);
+            }
+            catch
+            {
+                AddCloseAfterNavSnackbar("При регистрации пользователя произошла ошибка", Severity.Error);
+            }
+        }
+        else
+        {
+            AddCloseAfterNavSnackbar("Условия валидации не выполнены", Severity.Warning);
+        }
+    }
+
+    private async Task CreateIntroNote(User user)
+    {
+        Note note = new Note();
+        note.Title = "Новая заметка";
+        note.NoteBody = "{\"ops\":[{\"insert\":\"\\n\"}]}";
+        note.CreationDateTime = DateTime.Now;
+        note.ColorFromRGB = "#594ae2";
+        note.UserId = user.Id;
+        note.User = user;
+        note = await NoteClientService.CreateNote(note);
+    }
+
+    private async Task OnUserNameInput(string userName)
+    {
+        registrationModel.Username = userName;
+        if (userName.Length > 0 && userName.Length <= 10)
+        {
+            IsUniqUserName = await UserClientService.CheckUsername(userName);
+            StateHasChanged();
+        }
+    }
+
+    public void AddCloseAfterNavSnackbar(string message, Severity severity)
+    {
+        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.BottomRight;
+        Snackbar.Add(message, severity, (options) =>
+        {
+            options.CloseAfterNavigation = true;
+        });
+    }
+
+}

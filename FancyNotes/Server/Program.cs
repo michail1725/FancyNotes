@@ -1,4 +1,8 @@
-using Microsoft.AspNetCore.ResponseCompression;
+using Blazored.Modal;
+using DbAccess;
+using FancyNotes.Service;
+using Microsoft.EntityFrameworkCore;
+using MudBlazor.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -6,7 +10,12 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
-builder.Services.AddScoped();
+builder.Services.AddDbContext<AppDbContext>(options =>
+options.UseSqlServer(builder.Configuration.GetConnectionString("DBConnection")));
+builder.Services.AddScoped<INoteService, NoteService>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddControllersWithViews();
+builder.Services.AddOptions();
 
 var app = builder.Build();
 

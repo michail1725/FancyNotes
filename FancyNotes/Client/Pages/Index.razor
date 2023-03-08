@@ -1,9 +1,118 @@
 ﻿@page "/"
+@using System.ComponentModel.DataAnnotations;
+@using FancyNotes.Client.Services.Contracts;
+@using FancyNotes.Infrastructure;
+@using FancyNotes.Shared;
+@using Microsoft.AspNetCore.Components.Authorization;
 
-<PageTitle>Index</PageTitle>
+<PageTitle>Fancy Notes</PageTitle>
+ 
 
-<h1>Hello, world!</h1>
+<MudPaper Height="900px" Width="100%" Style="align-content:center;display:flex;justify-content:center;align-items:center;flex-direction:column ">
+    <AuthorizeView>
+    <NotAuthorized Context="notAuth">
+    <MudContainer Fixed="true" Style="">       
+        <EditForm Model="@loginModel" OnValidSubmit="OnValidSubmit">
+            <DataAnnotationsValidator />
+               <MudCard Style="max-width:500px; margin:auto">
+                   <MudText Typo="Typo.h6" Align="Align.Center">Перед использованием приложения необходимо пройти авторизацию или зарегистрироваться</MudText>
+                   <MudCardContent>
+                       <MudTextField Label="Имя пользователя:" @bind-Value="loginModel.Username" For="@(() => loginModel.Username)" />
+                       <MudTextField Label="Пароль:" Class="mt-3"
+                                     @bind-Value="loginModel.Password" For="@(() => loginModel.Password)" InputType="InputType.Password" />
+                   </MudCardContent>
+                   <MudCardActions>
+                       <MudButton Variant="Variant.Outlined" Color="Color.Primary" Class="ml-auto" OnClick=@ShowModal>Зарегистрироваться</MudButton>
+                       <MudSpacer></MudSpacer>
+                       <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto">Войти</MudButton>
+                   </MudCardActions>
+               </MudCard>
+        </EditForm>
+    </MudContainer>
+    </NotAuthorized>
+    <Authorized>
+        <MudAvatar Style="width:250px;height:250px;font-size:5rem" Color="Color.Secondary">@userNameChar</MudAvatar>
+        <MudText Typo="Typo.h4">Приветствую, @userName!</MudText>
+            <MudButton Style="margin-top:50px" Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Large" OnClick="ShowNotesList">Перейти к списку заметок</MudButton>
+    </Authorized>
+    </AuthorizeView>
+</MudPaper>
 
-Welcome to your new app.
 
-<SurveyPrompt Title="How is Blazor working for you?" />
+
+@code {
+    [CascadingParameter] public IModalService Modal { get; set; } = default!;
+
+    [Inject] AuthenticationStateProvider authenticationStateProvider { get; set; } = default!;
+    [Inject] NavigationManager NavigationManager { get; set; } = default!;
+    [Inject] IUserClientService UserClientService { get; set; } = default!;
+    [Inject] ILocalStorageService localStorageService { get; set; } = default!;
+    [Inject] ISnackbar Snackbar { get; set; } = default!;
+
+    LoginForm loginModel = new LoginForm();
+
+    string? userName;
+    char userNameChar;
+
+    protected override async Task OnInitializedAsync()
+    {
+        UserSession storagedData = await localStorageService.GetItemAsync<UserSession>("UserSession");
+        if (storagedData != null)
+        {
+            userName = storagedData.UserName;
+            userNameChar = storagedData.UserName.ToUpper()[0];
+        }
+    }
+
+    public class LoginForm
+    {
+        [Required(ErrorMessage = "Введите имя пользователя!")]
+        [StringLength(10, ErrorMessage = "Имя не может быть пустым или содержать более 10 знаков", MinimumLength = 1)]
+        public string? Username { get; set; }
+
+        [Required(ErrorMessage = "Необходимо ввести пароль!")]
+        [StringLength(30, ErrorMessage = "Пароль должен содержать от 4 до 30 знаков", MinimumLength = 4)]
+        public string? Password { get; set; }
+    }
+
+    async void ShowModal()
+    {
+        var messageForm = Modal.Show<RegistrationModalPage>("Регистрация нового пользователя");
+        var result = await messageForm.Result;
+        if (!result.Cancelled)
+        {
+            ShowNotesList();
+        }
+    }
+
+    private void ShowNotesList()
+    {
+        NavigationManager.NavigateTo("/NotesObserver", true);
+    }
+
+    private async Task OnValidSubmit(EditContext context)
+    {
+        var user = await UserClientService.VerifyUser(loginModel.Username, loginModel.Password);
+        if (user != null)
+        {
+            var customAuthenticationStateProvider = (CustomAuthenticationStateProvider)authenticationStateProvider;
+            await customAuthenticationStateProvider.UpdateAuthenticationState(new UserSession
+                {
+                    UserName = user.UserName,
+                    Id = user.Id
+                });
+            ShowNotesList();
+            StateHasChanged();
+        }
+        else
+        {
+            Snackbar.Configuration.PositionClass = Defaults.Classes.Position.BottomCenter;
+            Snackbar.Add("Неправильное имя пользователя или пароль. Проверьте данные авторизации", Severity.Error, (options) =>
+            {
+                options.CloseAfterNavigation = true;
+            });
+        }
+        
+    }
+
+}

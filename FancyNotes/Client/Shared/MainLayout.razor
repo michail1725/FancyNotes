@@ -1,17 +1,67 @@
-﻿@inherits LayoutComponentBase
+﻿@using FancyNotes.Infrastructure;
+@inherits LayoutComponentBase
 
-<div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
-
-    <main>
-        <div class="top-row px-4">
-            <a href="https://docs.microsoft.com/aspnet/" target="_blank">About</a>
-        </div>
-
-        <article class="content px-4">
+<MudLayout>
+    <MudAppBar Elevation="0">
+        <MudText Typo="Typo.h4" Color="Color.Default" @onclick="GoToHomePage">Fancy Notes</MudText>
+        <MudSpacer />
+        <AuthorizeView>
+            <Authorized>
+        <MudMenu FullWidth="false" AnchorOrigin="Origin.BottomCenter" TransformOrigin="Origin.TopRight">
+            <ActivatorContent>
+                <MudAvatar Color="Color.Secondary">@userNameChar</MudAvatar>
+            </ActivatorContent>
+            <ChildContent>
+                <MudContainer>
+                    <MudSpacer/>
+                    <MudText Style="margin-right:10px">Пользователь: @userName</MudText>
+                </MudContainer>
+               <MudMenuItem Icon="@Icons.Material.Filled.DoorFront" OnClick="LogOutAsync">Выйти из профиля</MudMenuItem>
+            </ChildContent>
+        </MudMenu>
+            </Authorized>
+        </AuthorizeView>
+    </MudAppBar>
+    <MudMainContent>
+        <MudContainer Class="my-0" Style="padding-left:0px; padding-right:0px; min-height:93vh">
             @Body
-        </article>
-    </main>
-</div>
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>
+
+
+<MudThemeProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+@code{
+    [Inject] NavigationManager NavigationManager { get; set; } = default!;
+    [Inject] AuthenticationStateProvider authenticationStateProvider { get; set; } = default!;
+    [Inject] ILocalStorageService localStorageService { get; set; } = default!;
+
+    char userNameChar;
+    string? userName;
+
+    protected override async Task OnInitializedAsync()
+    {
+        UserSession storagedData = await localStorageService.GetItemAsync<UserSession>("UserSession");
+        if (storagedData != null)
+        {
+            userName = storagedData.UserName;
+            userNameChar = storagedData.UserName.ToUpper()[0];
+        }
+    }
+
+    public async Task LogOutAsync()
+    {
+        NavigationManager.NavigateTo("/", true);
+        var customAuthenticationStateProvider = (CustomAuthenticationStateProvider)authenticationStateProvider;
+        await customAuthenticationStateProvider.UpdateAuthenticationState(null);
+    }
+
+    public void GoToHomePage()
+    {
+        NavigationManager.NavigateTo("/", true);
+    }
+
+}

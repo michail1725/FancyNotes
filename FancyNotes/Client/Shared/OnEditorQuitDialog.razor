@@ -1,0 +1,22 @@
+﻿<MudDialog>
+    <DialogContent>
+        <MudText>@ContentText</MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Не сохранять</MudButton>
+        <MudButton Color="@Color" Variant="Variant.Filled" OnClick="Submit">@ButtonText</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter] public string ContentText { get; set; } = default!;
+
+    [Parameter] public string ButtonText { get; set; } = default!;
+
+    [Parameter] public Color Color { get; set; }
+
+    void Submit() => MudDialog.Close(DialogResult.Ok(true));
+    void Cancel() => MudDialog.Cancel();
+}

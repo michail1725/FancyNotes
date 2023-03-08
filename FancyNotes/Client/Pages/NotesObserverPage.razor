@@ -1,0 +1,118 @@
+﻿@page "/NotesObserver"
+@using FancyNotes.Client.Services.Contracts;
+@using FancyNotes.Infrastructure;
+@using FancyNotes.Shared;
+@attribute [Authorize]
+
+<MudPaper Elevation="0" Height="70px" Style="padding-top:20px">
+    <MudStack Row="true" Justify="Justify.SpaceBetween">
+        <MudText Typo="Typo.h5" >Список заметок:</MudText>
+        <MudButton StartIcon="@Icons.Material.Filled.NoteAdd" Variant="Variant.Filled" OnClick="OpenNoteEditor">Создать заметку</MudButton>
+    </MudStack>
+</MudPaper>
+<MudDivider />
+
+<MudPaper Elevation="0" MinHeight="850px" Width="100%" Style="text-align:center; margin-top:5px;" >
+        @if (noteList.Count == 0)
+        {
+        <MudText Class="--mud-palette-text-secondary" Typo="Typo.h6">Список заметок пуст! Хороший повод, чтобы создать новую заметку...</MudText>
+        }
+        else
+        {
+            <MudGrid>
+            @foreach (Note note in noteList)
+            {
+                    <MudItem xs="12">
+                    <MudPaper Elevation="4" Width="100%" Height="120px" Style=@($"padding:10px;cursor:pointer;background-color:{note.ColorFromRGB}") @onclick="@((e)=> OpenNoteEditor(@note.Id))">
+                        <MudPaper Elevation="0" Width="100%" Height="100px" Class="align-center mud-width-full">
+                            <MudStack Row="true" Style="height:100%" Justify="Justify.SpaceBetween">
+                                <MudPaper Elevation="0" Style="text-align:start;padding:3px">
+                                    <MudText Style="font-size:small">Заметка создана:<br/>@note.CreationDateTime.ToString("yyyy'.'MM'.'dd")</MudText>
+                                </MudPaper>
+                                <MudPaper Elevation="0" Style="display:flex;justify-content:center;align-items:center">
+                                <MudText Typo="Typo.h4" Align="Align.Center">@note.Title</MudText>
+                                </MudPaper>
+                                <MudStack Justify="Justify.SpaceBetween">
+                                    <MudPaper Elevation="0">
+                                        <MudIconButton Style="margin-left:42px" Icon="@Icons.Material.Filled.Delete" Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small" OnClick="@((e)=> DeleteNote(@note.Id))" />
+                                    </MudPaper>
+                                </MudStack>
+                            </MudStack>    
+                        </MudPaper>
+                    </MudPaper>
+                    </MudItem>
+            }
+            </MudGrid>
+        }
+</MudPaper>
+
+<MudMessageBox @ref="mbox" Title="Внимание" CancelText="Нет, это ошибка">
+    <MessageContent>
+        Заметка удалится без возможности восстановления! Вы уверены, что хотите продолжить?
+    </MessageContent>
+    <YesButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Filled.DeleteForever">Да</MudButton>
+    </YesButton>
+</MudMessageBox>
+
+@code {
+    [Inject] ILocalStorageService localStorageService { get; set; } = default!;
+    [Inject] NavigationManager NavigationManager { get; set; } = default!;
+    [Inject] INoteClientService NoteClientService { get; set; } = default!;
+    [Inject] ISnackbar Snackbar { get; set; } = default!;
+
+
+    MudMessageBox mbox { get; set; } = default!;
+    public List<Note> noteList { get; set; } = new List<Note>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        //отрисовка может занять некоторое время...
+        await LoadNoteList();
+    }
+
+    private async Task LoadNoteList()
+    {
+        UserSession storagedData = await localStorageService.GetItemAsync<UserSession>("UserSession");
+
+        var notes = await NoteClientService.GetNotesList(storagedData.Id);
+        noteList = notes.ToList();
+    }
+
+    public async Task DeleteNote(int noteId)
+    {
+        bool? result = await mbox.Show();
+        if (result != null)
+        {
+            try
+            {
+                await NoteClientService.DeleteNote(noteId);
+                noteList.Remove(noteList.SingleOrDefault(x => x.Id == noteId));
+                StateHasChanged();
+            }
+            catch
+            {
+                AddCloseAfterNavSnackbar("Возникла ошибка при удалении заметки", Severity.Error);
+            }
+        }
+    }
+
+    public void OpenNoteEditor(int noteId)
+    {
+        NavigationManager.NavigateTo($"/NoteEditor/{noteId}", true);
+    }
+
+    public void OpenNoteEditor()
+    {
+        NavigationManager.NavigateTo($"/NoteEditor", true);
+    }
+
+    public void AddCloseAfterNavSnackbar(string message, Severity severity)
+    {
+        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.BottomRight;
+        Snackbar.Add(message, severity, (options) =>
+        {
+            options.CloseAfterNavigation = true;
+        });
+    }
+}
