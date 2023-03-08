@@ -43,7 +43,7 @@
 
 <MudStack Row="true" Style="padding-top:5px;padding-bottom:5px">
     <MudIconButton Icon="@Icons.Material.Filled.ColorLens" Color="Color.Dark" Size="Size.Large" OnClick="@ToggleOpen">@(_isOpen ? "Close" : "Open")</MudIconButton>
-        <MudPopover Open="_isOpen" OverflowBehavior="OverflowBehavior.FlipOnOpen" AnchorOrigin="Origin.TopCenter" TransformOrigin="Origin.BottomRight" Paper="false">
+        <MudPopover Open="_isOpen" OverflowBehavior="OverflowBehavior.FlipAlways" AnchorOrigin="Origin.BottomCenter" TransformOrigin="Origin.TopLeft" Paper="false">
             <MudItem md="8" Class="d-flex justify-center">
                 <MudColorPicker Value="_pickerColor" ValueChanged="@((MudColor newColor) => OnColorInput(newColor))" DisableToolbar="false" DisableAlpha="true" DisableColorField="false" DisablePreview="false" DisableSliders="true" DisableInputs="true" DisableModeSwitch="true" ColorPickerMode="ColorPickerMode.HEX" PickerVariant="PickerVariant.Static" />
             </MudItem>
@@ -90,6 +90,7 @@
 
 
     @code {
+    //вероятно, не самый безопасный вариант доступа к заметке
     [Parameter]
     public string? noteId { get; set; }
 
@@ -211,7 +212,7 @@
 
         var dialog = await DialogService.ShowAsync<OnEditorQuitDialog>("Предупреждение", parameters);
         var result = await dialog.Result;
-        if (!result.Cancelled)
+        if (!result.Canceled)
         {
             await SaveNoteContent();
         }
